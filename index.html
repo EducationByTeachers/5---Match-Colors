@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title> Match Colors</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background: #f0f4f8;
+    margin: 0;
+    padding: 0;
+}
+.screen { display: none; padding: 20px; }
+.active { display: block; }
+h1 { font-size: 2rem; color: #333; }
+p { font-size: 1.1rem; color: #555; }
+#color-box {
+    width: 200px;
+    height: 200px;
+    margin: 20px auto;
+    border: 3px solid #333;
+    border-radius: 12px;
+}
+#options {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin: 20px 0;
+}
+.option-btn {
+    padding: 12px 20px;
+    border: 2px solid #333;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    background: #fff;
+    font-weight: bold;
+}
+.option-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+#message {
+    font-size: 1.4rem;
+    font-weight: bold;
+    display: none;
+    margin: 10px 0;
+}
+#good-job {
+    font-size: 3rem;
+    color: green;
+    font-weight: bold;
+    display: none;
+    margin-top: 20px;
+}
+button.action-btn {
+    padding: 12px 24px;
+    margin: 10px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    background: #2196F3;
+    color: #fff;
+}
+</style>
+</head>
+<body>
+
+<!-- Ventana inicial -->
+<div id="start-screen" class="screen active">
+    <h1>MATCH COLOR</h1>
+    <p>Select the correct Spanish name for each color shown. Complete all 11 rounds to win!</p>
+    <button onclick="startGame()" class="action-btn">Start</button>
+</div>
+
+<!-- Ventana del juego -->
+<div id="game-screen" class="screen">
+    <h1>MATCH COLOR</h1>
+    <div id="color-box"></div>
+    <div id="options"></div>
+    <div id="message"></div>
+    <button id="continue-btn" class="action-btn" onclick="nextRound()" disabled>Continue</button>
+    <div id="good-job">GOOD JOB!</div>
+    <button class="action-btn" onclick="restartGame()">Restart</button>
+</div>
+
+<!-- Confeti -->
+<canvas id="confetti-canvas" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;display:none;"></canvas>
+
+<script>
+const colors = [
+    {nameEs: "Amarillo", code: "#FFEB3B"},
+    {nameEs: "Azul", code: "#2196F3"},
+    {nameEs: "Rojo", code: "#F44336"},
+    {nameEs: "Blanco", code: "#FFFFFF"},
+    {nameEs: "Negro", code: "#212121"},
+    {nameEs: "Verde", code: "#4CAF50"},
+    {nameEs: "Gris", code: "#9E9E9E"},
+    {nameEs: "Naranja", code: "#FF9800"},
+    {nameEs: "Púrpura", code: "#9C27B0"},
+    {nameEs: "Rosado", code: "#FFB6C1"},
+    {nameEs: "Marrón", code: "#795548"}
+];
+
+let shuffledColors, currentRound, confettiInterval;
+
+function startGame() {
+    document.getElementById('start-screen').classList.remove('active');
+    document.getElementById('game-screen').classList.add('active');
+    restartGame();
+}
+
+function restartGame() {
+    stopConfetti();
+    document.getElementById('good-job').style.display = 'none';
+    document.getElementById('message').style.display = 'none';
+    document.getElementById('continue-btn').disabled = true;
+    shuffledColors = [...colors].sort(() => Math.random() - 0.5);
+    currentRound = 0;
+    loadRound();
+}
+
+function loadRound() {
+    if (currentRound >= shuffledColors.length) {
+        document.getElementById('good-job').style.display = 'block';
+        startConfetti();
+        return;
+    }
+
+    document.getElementById('message').style.display = 'none';
+    document.getElementById('continue-btn').disabled = true;
+
+    const color = shuffledColors[currentRound];
+    document.getElementById('color-box').style.background = color.code;
+
+    // elegir 3 opciones incorrectas al azar
+    let options = [color];
+    while (options.length < 4) {
+        let candidate = colors[Math.floor(Math.random()*colors.length)];
+        if (!options.includes(candidate)) {
+            options.push(candidate);
+        }
+    }
+
+    options = options.sort(() => Math.random() - 0.5);
+
+    const optionsContainer = document.getElementById('options');
+    optionsContainer.innerHTML = '';
+    options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.textContent = opt.nameEs;
+        btn.className = 'option-btn';
+        btn.onclick = () => checkAnswer(opt, btn, color);
+        optionsContainer.appendChild(btn);
+    });
+}
+
+function checkAnswer(selected, btn, correct) {
+    const message = document.getElementById('message');
+    message.style.display = 'block';
+    if (selected === correct) {
+        btn.style.background = correct.code;
+        message.textContent = "Correct!";
+        message.style.color = "green";
+        document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+        document.getElementById('continue-btn').disabled = false;
+    } else {
+        message.textContent = "Error, try again!";
+        message.style.color = "red";
+    }
+}
+
+function nextRound() {
+    currentRound++;
+    loadRound();
+}
+
+// Confeti
+function startConfetti() {
+    const canvas = document.getElementById('confetti-canvas');
+    canvas.style.display = 'block';
+    const ctx = canvas.getContext('2d');
+    let pieces = Array.from({ length: 150 }, () => ({
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight - window.innerHeight,
+        r: Math.random() * 6 + 4,
+        d: Math.random() * 10 + 10,
+        color: `hsl(${Math.random()*360},100%,50%)`
+    }));
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    function draw() {
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        pieces.forEach(p => {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI*2,false);
+            ctx.fillStyle = p.color;
+            ctx.fill();
+        });
+        update();
+    }
+    function update() {
+        pieces.forEach(p => {
+            p.y += Math.cos(p.d)+p.r/2;
+            if(p.y>canvas.height){p.y=-10; p.x=Math.random()*canvas.width;}
+        });
+    }
+    confettiInterval = setInterval(draw, 20);
+}
+
+function stopConfetti() {
+    clearInterval(confettiInterval);
+    document.getElementById('confetti-canvas').style.display = 'none';
+}
+</script>
+
+</body>
+</html>
